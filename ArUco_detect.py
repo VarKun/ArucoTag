@@ -59,18 +59,17 @@ video.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 video.set(cv2.CAP_PROP_FPS, 60)
 
 def get_direction_character(x_coord, case):
-    """根据x坐标和大小写状态返回方向字符"""
-    num_chars = 26  # a-z 和 A-Z 一共有26个字符
-    scale = num_chars / 1280  # 假设相机宽度为1280像素
-    char_index = int(x_coord * scale)  # 将x坐标映射到0到25的范围
+    num_chars = 26
+    scale = num_chars / 1280
+    char_index = int(x_coord * scale)
 
     if case == 'upper':
-        return chr(char_index + ord('A'))  # 大写字母
+        return chr(char_index + ord('A'))
+
     else:
-        return chr(char_index + ord('a'))  # 小写字母
+        return chr(char_index + ord('a'))
 
 def find_gate(corners, ids):
-    """找到成对的标签组成的门"""
     if len(ids) < 2:
         return None, None
 
@@ -86,13 +85,13 @@ def find_gate(corners, ids):
             if (id1 == 0 and id2 == 1) or (id1 == 1 and id2 == 0):
                 area1 = cv2.contourArea(corner1)
                 area2 = cv2.contourArea(corner2)
-                if abs(area1 - area2) / max(area1, area2) < 0.5:  # 面积差异不超过20%
+                if abs(area1 - area2) / max(area1, area2) < 0.5:
                     center1 = np.mean(corner1.reshape(4, 2), axis=0)
                     center2 = np.mean(corner2.reshape(4, 2), axis=0)
-                    if abs(center1[1] - center2[1]) < 150:  # 水平线上的标签（y坐标差异小于100像素）
+                    if abs(center1[1] - center2[1]) < 150:
                         gates.append((corner1, corner2))
     if gates:
-        return gates[0]  # 返回第一个找到的门
+        return gates[0]
     else:
         return None, None
 
@@ -115,7 +114,7 @@ while True:
         marker1, marker2 = find_gate(corners, ids)
 
         if marker1 is not None and marker2 is not None:
-            # 计算门的中点
+
             corners1 = marker1.reshape(4, 2)
             corners2 = marker2.reshape(4, 2)
             mid_point = (corners1.mean(axis=0) + corners2.mean(axis=0)) / 2
@@ -125,7 +124,7 @@ while True:
             area2 = cv2.contourArea(marker2)
             largest_area = max(area1, area2)
 
-            # 更新大小写逻辑
+
             if largest_area < previous_gate_size * 0.5:
                 current_case = 'upper' if current_case == 'lower' else 'lower'
 
@@ -134,14 +133,14 @@ while True:
 
             previous_gate_size = largest_area
 
-            # 画出检测到的成对标签（门）
+
             cv2.polylines(frame, [marker1.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)  # 黄色
             cv2.polylines(frame, [marker2.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)  # 黄色
             cv2.circle(frame, (cX, cY), 4, (0, 255, 255), -1)
             cv2.putText(frame, f"Gate:{direction_char}", (cX - 20, cY - 10), cv2.FONT_HERSHEY_PLAIN, 1.3, (255, 0, 255), 2, cv2.LINE_AA)
             cv2.putText(frame, f"Size:{round(largest_area/1000, 2)}", (cX, cY + 20), cv2.FONT_HERSHEY_PLAIN, 1.3, (0, 255, 0), 2, cv2.LINE_AA)
 
-        # 画出其他检测到的标签（红色）并标记ID和X轴数据
+
         for i in range(len(corners)):
             corner = corners[i].reshape(4, 2)
             cX = int(corner[:, 0].mean())
