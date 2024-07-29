@@ -1,0 +1,7 @@
+$ tree . --dirsfirst
+.
+├── images
+│   ├── example_01.png
+│   └── example_02.png
+├── detect_aruco_image.py
+└── detect_aruco_video.py
