@@ -134,8 +134,8 @@ while True:
             previous_gate_size = largest_area
 
 
-            cv2.polylines(frame, [marker1.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)  # 黄色
-            cv2.polylines(frame, [marker2.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)  # 黄色
+            cv2.polylines(frame, [marker1.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)  # Yellow
+            cv2.polylines(frame, [marker2.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)  # Yellow
             cv2.circle(frame, (cX, cY), 4, (0, 255, 255), -1)
             cv2.putText(frame, f"Gate:{direction_char}", (cX - 20, cY - 10), cv2.FONT_HERSHEY_PLAIN, 1.3, (255, 0, 255), 2, cv2.LINE_AA)
             cv2.putText(frame, f"Size:{round(largest_area/1000, 2)}", (cX, cY + 20), cv2.FONT_HERSHEY_PLAIN, 1.3, (0, 255, 0), 2, cv2.LINE_AA)
@@ -146,7 +146,7 @@ while True:
             cX = int(corner[:, 0].mean())
             cY = int(corner[:, 1].mean())
             if not (np.array_equal(corners[i], marker1) or np.array_equal(corners[i], marker2)):
-                cv2.polylines(frame, [corners[i].astype(np.int32)], True, (0, 0, 255), 4, cv2.LINE_AA)  # 红色
+                cv2.polylines(frame, [corners[i].astype(np.int32)], True, (0, 0, 255), 4, cv2.LINE_AA)  # Red
             cv2.putText(frame, f"ID:{ids[i]} X:{cX}", (cX - 20, cY - 10), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
     else:
