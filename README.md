@@ -6,7 +6,7 @@ ArucoTag is a collection of OpenCV utilities for working with ArUco and AprilTag
 
 - **Marker generation** – Quickly export individual marker images from any predefined OpenCV dictionary (`generate_marker.py`).
 - **Custom dictionary support** – Build and persist your own marker dictionary (`marker_dictionary_made.py`) for application specific IDs (`custom_dict.yml`).
-- **Camera calibration** – Calibrate a camera from a folder of captured marker images and save intrinsic/extrinsic parameters to `ArucoCheckMultiMatrix.npz` (`calibration_camera.py`).
+- **Camera calibration** – Calibrate a camera from a folder of captured marker images and save intrinsic/extrinsic parameters to `ArucoCheckMultiMatrix.npz` in the repository root (`calibration_camera.py`).
 - **Real-time detection** – Detect markers from a webcam stream, highlight a "gate" built from IDs 0 and 1, and map its position to alphabetic direction cues (`ArUco_detect.py`).
 - **Baseline detector** – Simple live preview that draws the bounding box and ID for every detected marker (`image.py`).
 
@@ -49,7 +49,7 @@ ArucoTag is a collection of OpenCV utilities for working with ArUco and AprilTag
 
 ### 1. Generate or extend a dictionary
 
-- Use `marker_dictionary_made.py` to extend the built-in dictionary and save it to `custom_dict.yml`.  The script expects a sample image (`image_detected/right.jpg`) that already contains markers from the desired dictionary.
+- Use `marker_dictionary_made.py` to extend the built-in dictionary and save it to `custom_dict.yml`.  The script expects a sample image (`image_detected/right.jpg`) that already contains markers from the desired dictionary and will write the dictionary file next to the script regardless of your working directory.
 - Alternatively, rely on the stock dictionaries provided by OpenCV if custom IDs are not required.
 
 ### 2. Produce printable markers
@@ -65,8 +65,8 @@ Each generated `tag_<id>.png` is 400×400 pixels by default.  Adjust the diction
 ### 3. Capture calibration images
 
 1. Print at least one marker and place it on a flat surface.
-2. Capture multiple photos from different angles and save them to `image_detected/` (or update `imagePath` inside `calibration_camera.py`).
-3. Ensure `marker_Length` matches the physical size (in the same units you want returned for translations).
+2. Capture multiple photos from different angles and save them to `image_detected/`.
+3. Ensure the `marker_length` constant in `calibration_camera.py` matches the physical size (in the same units you want returned for translations).
 
 ### 4. Calibrate the camera
 
@@ -76,13 +76,13 @@ Run:
 python calibration_camera.py
 ```
 
-The script will detect markers in each photo, assemble 3D–2D correspondences, and save intrinsic parameters to `ArucoCheckMultiMatrix.npz` (camera matrix, distortion coefficients, and pose vectors).  `ArUco_detect.py` loads this file to undistort and estimate gate geometry.
+The script will detect markers in each photo, assemble 3D–2D correspondences, and save intrinsic parameters to `ArucoCheckMultiMatrix.npz` (camera matrix, distortion coefficients, pose vectors, and reprojection error) in the repository root.  `ArUco_detect.py` automatically loads this file from the same directory as the script to undistort frames and estimate gate geometry.
 
 ### 5. Detect markers in real time
 
 Choose the detector that fits your needs:
 
-- `ArUco_detect.py` – Highlights markers, detects the gate formed by IDs 0 and 1, reports gate area, and converts the horizontal midpoint to an alphabet character (lowercase by default, uppercase when the perceived gate size halves).
+- `ArUco_detect.py` – Highlights markers, detects the gate formed by IDs 0 and 1, reports gate area, and converts the horizontal midpoint to an alphabet character (lowercase by default, uppercase when the perceived gate size halves).  The script validates that both `custom_dict.yml` and `ArucoCheckMultiMatrix.npz` exist next to it and prints informative errors if they do not.
 - `image.py` – Lightweight viewer that labels every detected marker without the gate-specific logic.
 
 Launch any script with:
@@ -104,8 +104,8 @@ You can import these functions into your own code or adapt the loop structure fo
 
 ## Tips & troubleshooting
 
-- **Custom dictionary loading** – Ensure `custom_dict.yml` is present when running scripts that depend on it (`ArUco_detect*.py`, `calibration_camera.py`).  Regenerate the file with `marker_dictionary_made.py` if you change the dictionary.
-- **Calibration path** – `ArUco_detect*.py` expect `ArucoCheckMultiMatrix.npz` to be one directory above the script when running from the repo root.  Adjust `calibration_path` if you move the file.
+- **Custom dictionary loading** – Ensure `custom_dict.yml` is present when running scripts that depend on it (`ArUco_detect.py`, `calibration_camera.py`).  Regenerate the file with `marker_dictionary_made.py` if you change the dictionary.
+- **Calibration path** – `ArUco_detect.py` looks for `ArucoCheckMultiMatrix.npz` in the same directory as the script.  Run `calibration_camera.py` to regenerate the file if you remove it.
 - **Performance** – Detection defaults to 1280×720 @ 60 FPS.  Lower the resolution or frame rate on resource constrained hardware.
 - **Lighting** – High contrast lighting significantly improves detection accuracy.  Avoid glare on printed markers.
 
