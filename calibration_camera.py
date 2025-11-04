@@ -1,58 +1,108 @@
 import cv2
 import numpy as np
-import os
+from pathlib import Path
 
-cv_file = cv2.FileStorage("custom_dict.yml", cv2.FILE_STORAGE_READ)
-custom_bytes_list = cv_file.getNode("custom_dictionary").mat()
-cv_file.release()
-
-marker_size = 4
-custom_dictionary = cv2.aruco.Dictionary(custom_bytes_list, marker_size)
-
-aruco_Dict = custom_dictionary
-aruco_Parameter = cv2.aruco.DetectorParameters()
-
-marker_Length = 40
-
-object_points_3D = []
-image_2D = []
+BASE_DIR = Path(__file__).resolve().parent
+CUSTOM_DICT_PATH = BASE_DIR / "custom_dict.yml"
+CALIBRATION_IMAGE_DIR = BASE_DIR / "image_detected"
+CALIBRATION_OUTPUT_PATH = BASE_DIR / "ArucoCheckMultiMatrix.npz"
 
 
-imagePath = "image_detected"
-files = os.listdir(imagePath)
+def load_custom_dictionary(marker_size: int = 4) -> cv2.aruco.Dictionary:
+    """Load the persisted custom dictionary from disk."""
+    if not CUSTOM_DICT_PATH.exists():
+        raise FileNotFoundError(
+            f"Custom dictionary not found at {CUSTOM_DICT_PATH}. "
+            "Run marker_dictionary_made.py before calibrating."
+        )
+
+    cv_file = cv2.FileStorage(str(CUSTOM_DICT_PATH), cv2.FILE_STORAGE_READ)
+    custom_bytes_list = cv_file.getNode("custom_dictionary").mat()
+    cv_file.release()
+
+    if custom_bytes_list is None:
+        raise ValueError(
+            "The custom dictionary file does not contain a 'custom_dictionary' node."
+        )
+
+    return cv2.aruco.Dictionary(custom_bytes_list, marker_size)
 
 
+def collect_calibration_points(
+    aruco_dict: cv2.aruco.Dictionary,
+    aruco_parameters: cv2.aruco.DetectorParameters,
+    marker_length: float,
+):
+    """Collect 3D-2D correspondences from the images folder."""
+    object_points = []
+    image_points = []
+    image_size = None
 
-def checkArucoMarker(files, imagePath, aurcoParamether, arucoDict, markerlength ):
-    for file in files:
-        image_path = os.path.join(imagePath, file)
-        frame = cv2.imread(image_path)
+    if not CALIBRATION_IMAGE_DIR.exists():
+        raise FileNotFoundError(
+            f"Image directory '{CALIBRATION_IMAGE_DIR}' does not exist."
+        )
+
+    marker_template = np.array(
+        [
+            [0, 0, 0],
+            [marker_length, 0, 0],
+            [marker_length, marker_length, 0],
+            [0, marker_length, 0],
+        ],
+        dtype=np.float32,
+    )
+
+    for image_path in sorted(CALIBRATION_IMAGE_DIR.iterdir()):
+        if image_path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}:
+            continue
+
+        frame = cv2.imread(str(image_path))
+        if frame is None:
+            print(f"[WARN] Could not load '{image_path.name}', skipping.")
+            continue
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        corners, ids, _ = cv2.aruco.detectMarkers(
+            gray, aruco_dict, parameters=aruco_parameters
+        )
 
-        corners, ids, rejected = cv2.aruco.detectMarkers(gray,arucoDict, parameters= aurcoParamether)
-        createMarkerShape(corners,ids,rejected,markerlength,gray)
-    return gray
+        if ids is None:
+            print(f"[INFO] No markers detected in '{image_path.name}', skipping.")
+            continue
 
+        image_size = gray.shape[::-1]
 
+        for marker_corners in corners:
+            object_points.append(marker_template.copy())
+            image_points.append(marker_corners.reshape(-1, 2).astype(np.float32))
 
-def createMarkerShape(corners, ids, rejected, marklength,image_gray):
-    if len(corners) > 0 :
-        for i in range(len(ids)):
-            object_point = [np.array([[0,0,0],[marklength,0,0],[marklength,marklength,0],[0,marklength,0]], dtype= np.float32)]
-            object_points_3D.append(object_point)
-            image_2D.append(corners[i])
+    if not object_points or not image_points:
+        raise RuntimeError("No ArUco markers detected in the calibration images.")
+
+    return object_points, image_points, image_size
 
 
 if __name__ == '__main__':
+    dictionary = load_custom_dictionary()
+    parameters = cv2.aruco.DetectorParameters()
+    marker_length = 40.0
 
-    gray = checkArucoMarker(files=files,imagePath=imagePath,aurcoParamether=aruco_Parameter,arucoDict=aruco_Dict,markerlength=marker_Length)
+    object_points, image_points, image_size = collect_calibration_points(
+        dictionary, parameters, marker_length
+    )
 
-    object_3D = np.array(object_points_3D).reshape(-1, 3)
-    object_2D = np.array(image_2D).reshape(-1, 2)
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
+        object_points, image_points, image_size, None, None
+    )
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera([object_3D], [object_2D], gray.shape[::-1], None, None)
+    np.savez(
+        str(CALIBRATION_OUTPUT_PATH),
+        camMatrix=mtx,
+        distCoef=dist,
+        rVector=rvecs,
+        tVector=tvecs,
+        reprojection_error=ret,
+    )
 
-    calibration_data_path = "../Apriltage"
-    np.savez(f"{calibration_data_path}/ArucoCheckMultiMatrix", camMatrix=mtx, distCoef=dist, rVector=rvecs, tVector=tvecs)
-
-    print("Camera calibration is completed and saved.")
+    print(f"Camera calibration is completed and saved to '{CALIBRATION_OUTPUT_PATH.name}'.")

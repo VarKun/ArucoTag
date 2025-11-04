@@ -6,6 +6,7 @@ ArucoTag is a collection of OpenCV utilities for working with ArUco and AprilTag
 
 - **Marker generation** – Quickly export individual marker images from any predefined OpenCV dictionary (`generate_marker.py`).
 - **Custom dictionary support** – Build and persist your own marker dictionary (`marker_dictionary_made.py`) for application specific IDs (`custom_dict.yml`).
+
 - **Camera calibration** – Calibrate a camera from a folder of captured marker images and save intrinsic/extrinsic parameters to `ArucoCheckMultiMatrix.npz` (`calibration_camera.py`).
 - **Real-time detection** – Detect markers from a webcam stream, highlight a "gate" built from IDs 0 and 1, and map its position to alphabetic direction cues (`ArUco_detect.py`, `ArUco_detect2.py`).
 - **Baseline detector** – Simple live preview that draws the bounding box and ID for every detected marker (`image.py`).
